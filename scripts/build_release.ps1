@@ -28,7 +28,6 @@ python -m PyInstaller `
     --add-data "backup;backup" `
     --add-data "reports;reports" `
     --add-data "logs;logs" `
-    --add-data "tools;tools" `
     --add-data "rules;rules" `
     --hidden-import paramiko `
     --hidden-import bcrypt `
@@ -40,7 +39,7 @@ python -m PyInstaller `
 New-Item -ItemType Directory -Force -Path $releaseRoot | Out-Null
 Copy-Item -Recurse -Force -LiteralPath (Join-Path $root "dist\MapFanSim") -Destination $releaseDir
 
-foreach ($dir in @("data", "rules")) {
+foreach ($dir in @("rules", "input_maps")) {
     $src = Join-Path $root $dir
     $dst = Join-Path $releaseDir $dir
     if (Test-Path $src) {
@@ -48,7 +47,25 @@ foreach ($dir in @("data", "rules")) {
     }
 }
 
-foreach ($dir in @("input_maps", "output_maps", "download", "update", "backup", "reports", "logs", "tools")) {
+$dataSrc = Join-Path $root "data"
+$dataDst = Join-Path $releaseDir "data"
+if (Test-Path $dataSrc) {
+    New-Item -ItemType Directory -Force -Path $dataDst | Out-Null
+    Get-ChildItem -LiteralPath $dataSrc -File | Where-Object { $_.Name -ne "config.json" -and $_.Name -ne "config.local.json" } | ForEach-Object {
+        Copy-Item -Force -LiteralPath $_.FullName -Destination (Join-Path $dataDst $_.Name)
+    }
+}
+
+$toolsSrc = Join-Path $root "tools"
+$toolsDst = Join-Path $releaseDir "tools"
+if (Test-Path $toolsSrc) {
+    New-Item -ItemType Directory -Force -Path $toolsDst | Out-Null
+    Get-ChildItem -LiteralPath $toolsSrc | ForEach-Object {
+        Copy-Item -Recurse -Force -LiteralPath $_.FullName -Destination $toolsDst
+    }
+}
+
+foreach ($dir in @("output_maps", "download", "update", "backup", "reports", "logs", "tools")) {
     New-Item -ItemType Directory -Force -Path (Join-Path $releaseDir $dir) | Out-Null
 }
 

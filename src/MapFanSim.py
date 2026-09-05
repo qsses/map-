@@ -46,6 +46,7 @@ APP_VERSION = "V8-HTA-LikeLayout"
 GITHUB_REPOSITORY = "https://github.com/qssec1/map.git"
 GITEE_REPOSITORY = "https://gitee.com/qssec/map"
 PRODUCT_DOWNLOAD_URL = "https://gitee.com/qssec/map/blob/master/artifacts/MapFanSim-windows-x64.zip"
+WIND_TOOL_NAME = "风机文件拷取工具"
 
 # -----------------------------
 # 路径与基础工具
@@ -240,7 +241,7 @@ def load_config() -> Config:
     try:
         raw = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
         base = asdict(Config())
-        base.update(raw)
+        base.update({key: value for key, value in raw.items() if key in base})
         return Config(**base)
     except Exception:
         # 配置损坏时备份后重建
@@ -1078,6 +1079,7 @@ class App(tk.Tk):
         nav_items = [
             ("local_replace", "本地替换"),
             ("cloud_replace", "云端替换"),
+            ("integrated_tools", "集成工具"),
             ("settings", "设置"),
             ("help", "教程"),
         ]
@@ -1091,6 +1093,7 @@ class App(tk.Tk):
 
         self._create_local_replace_page()
         self._create_cloud_replace_page()
+        self._create_integrated_tools_page()
         self._create_settings_page()
         self._create_help_page()
         self.show_page("local_replace")
@@ -1349,6 +1352,7 @@ class App(tk.Tk):
         c.pack(fill=tk.X, pady=(0, 8))
         self._grid_buttons(c, [
             ("一键仿真", self.task_one_click, True),
+            ("全场仿真取消", self.task_cancel_full_farm_simulation, False),
             ("测试连接", self.task_test_remote, False),
             ("下载服务器 MAP", self.task_download, False),
             ("上传 update", self.task_upload_latest_update, False),
@@ -1474,6 +1478,7 @@ class App(tk.Tk):
         cloud_grid.pack(fill=tk.X)
         cloud_buttons = [
             ("一键仿真", self.task_one_click),
+            ("全场仿真取消", self.task_cancel_full_farm_simulation),
             ("测试连接", self.task_test_remote),
             ("下载服务器 MAP", self.task_download),
             ("上传 update", self.task_upload_latest_update),
@@ -1531,6 +1536,7 @@ class App(tk.Tk):
             ("下载服务器 MAP", self.task_download),
             ("上传 update 目录 MAP", self.task_upload_latest_update),
             ("一键仿真：下载→备份→替换→报告→上传", self.task_one_click),
+            ("全场仿真取消：上传源文件还原", self.task_cancel_full_farm_simulation),
             ("取消仿真 / 上传最近备份恢复", self.task_restore_backup),
         ]:
             ttk.Button(c, text=text, command=cmd).pack(side=tk.LEFT, padx=8, pady=14)
@@ -1633,6 +1639,19 @@ class App(tk.Tk):
         ttk.Button(parent, text="选择目录", command=lambda v=var: self.choose_dir(v)).grid(row=row, column=2, padx=8, pady=6)
         parent.grid_columnconfigure(1, weight=1)
 
+    def _create_integrated_tools_page(self):
+        p = self.make_page("integrated_tools")
+        ttk.Label(p, text="集成工具", style="Title.TLabel").pack(anchor="w", padx=24, pady=(22, 4))
+        ttk.Label(p, text="这里放独立工具，不挤占云端仿真区。", style="Sub.TLabel").pack(anchor="w", padx=24, pady=(0, 14))
+        body = tk.Frame(p, bg="#0f1720")
+        body.pack(fill=tk.BOTH, expand=True, padx=24, pady=(0, 14))
+        c = self.card(body, "已集成工具")
+        c.pack(fill=tk.X)
+        ttk.Button(c, text=WIND_TOOL_NAME, style="Accent.TButton", command=self.open_wind_tool).pack(side=tk.LEFT, padx=8, pady=14)
+        ttk.Button(c, text="使用说明", command=self.open_wind_tool_help).pack(side=tk.LEFT, padx=8, pady=14)
+        ttk.Button(c, text="打开工具目录", command=lambda: open_farm_runtime_folder("tools")).pack(side=tk.LEFT, padx=8, pady=14)
+        ttk.Label(c, text="工具随当前成品目录携带，发给别人后可直接打开。", style="Panel.TLabel").pack(side=tk.LEFT, padx=14, pady=14)
+
     def _create_mapping_page(self):
         p = self.make_page("mapping")
         ttk.Label(p, text="风机映射", style="Title.TLabel").pack(anchor="w", padx=24, pady=(22, 4))
@@ -1692,7 +1711,8 @@ class App(tk.Tk):
 1. “下载服务器 MAP”只下载服务器原始 slaverMB_1.map 到 download，文件名不改、内容不改。
 2. “一键仿真”会先在服务器备份，再下载原始 MAP 到本地，再本地备份，再替换生成 update\\slaverMB_1.map，最后上传覆盖服务器 slaverMB_1.map。
 3. “上传 update”也会先在服务器备份，然后只上传 update\\slaverMB_1.map 覆盖服务器 slaverMB_1.map。
-4. “恢复最近备份”会从本地 backup 取最近备份，并上传覆盖服务器 slaverMB_1.map。
+4. “全场仿真取消”会直接上传当前风场 input_maps 里的源 MAP，用源文件还原服务器全场。
+5. “恢复最近备份”会从本地 backup 取最近备份，并上传覆盖服务器 slaverMB_1.map。
 
 四、备份规则
 1. 服务器备份不能叫 slaverMB_1.map，避免被服务误识别。
@@ -1751,6 +1771,40 @@ class App(tk.Tk):
                 self.log(tb)
                 self.after(0, lambda: messagebox.showerror("失败", f"{title} 失败：\n{e}"))
         threading.Thread(target=worker, daemon=True).start()
+
+    def open_wind_tool(self):
+        candidates = [
+            ROOT / "tools" / WIND_TOOL_NAME / f"{WIND_TOOL_NAME}.exe",
+            ROOT / "tools" / f"{WIND_TOOL_NAME}.exe",
+        ]
+        for exe in candidates:
+            if exe.exists():
+                try:
+                    subprocess.Popen([str(exe)], cwd=str(exe.parent))
+                    self.log(f"已打开集成工具：{exe}")
+                    return
+                except Exception as e:
+                    self.log(f"打开集成工具失败：{e}")
+                    messagebox.showerror("打开失败", f"打开集成工具失败：\n{e}")
+                    return
+        messagebox.showwarning("未找到", f"未找到 {WIND_TOOL_NAME}.exe。")
+
+    def open_wind_tool_help(self):
+        candidates = [
+            ROOT / "tools" / WIND_TOOL_NAME / f"{WIND_TOOL_NAME}-使用说明.txt",
+            ROOT / "tools" / f"{WIND_TOOL_NAME}-使用说明.txt",
+        ]
+        for doc in candidates:
+            if doc.exists():
+                try:
+                    os.startfile(str(doc))
+                    self.log(f"已打开使用说明：{doc}")
+                    return
+                except Exception as e:
+                    self.log(f"打开使用说明失败：{e}")
+                    messagebox.showerror("打开失败", f"打开使用说明失败：\n{e}")
+                    return
+        messagebox.showwarning("未找到", f"未找到 {WIND_TOOL_NAME}-使用说明.txt。")
 
     def save_settings(self):
         self.cfg.remoteMode = self.var_remoteMode.get().strip()
@@ -2262,6 +2316,44 @@ class App(tk.Tk):
             else:
                 self.log("未找到服务器备份记录，跳过删除服务器备份。")
         self.run_bg("取消仿真 / 恢复备份", work)
+
+    def _source_map_for_full_cancel(self) -> Path:
+        local_s = self.local_map_var.get().strip() if hasattr(self, "local_map_var") else self.cfg.localMapPath
+        candidates: List[Path] = []
+        candidates.append(farm_runtime_path("input_maps", self.cfg.remoteFile))
+        if local_s:
+            candidates.append(Path(local_s))
+        candidates.extend(sorted(farm_runtime_dir("input_maps").glob("*.map"), key=lambda p: p.stat().st_mtime, reverse=True))
+
+        seen = set()
+        for candidate in candidates:
+            try:
+                resolved = candidate.expanduser().resolve()
+            except Exception:
+                resolved = candidate
+            key = str(resolved).lower()
+            if key in seen or not resolved.exists():
+                continue
+            seen.add(key)
+            try:
+                source = validate_current_farm_map_path(resolved, "全场仿真取消源 MAP")
+            except RuntimeError as exc:
+                self.log(f"跳过非当前风场源 MAP：{resolved}；{exc}")
+                continue
+            if source.name != self.cfg.remoteFile:
+                self.log(f"注意：源 MAP 文件名为 {source.name}，上传后会覆盖服务器 {self.cfg.remoteFile}。")
+            return source
+        raise RuntimeError(f"当前风场 input_maps 没有可上传的源 MAP：{farm_runtime_dir('input_maps')}")
+
+    def task_cancel_full_farm_simulation(self):
+        def work():
+            self.save_settings_no_popup()
+            source = self._source_map_for_full_cancel()
+            st = source.stat()
+            self.log(f"全场仿真取消：上传源文件还原全场：{source}")
+            self.log(f"源文件时间：{format_file_time(st.st_mtime)}；服务器恢复后应显示这个文件时间。")
+            RemoteClient(self.cfg, self.log).upload(source)
+        self.run_bg("全场仿真取消", work)
 
     def run_tool_action(self, kind: str):
         def work():

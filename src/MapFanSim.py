@@ -137,6 +137,10 @@ def open_farm_runtime_folder(key: str) -> None:
     safe_open_folder(farm_runtime_dir(key))
 
 
+def open_tools_root_folder() -> None:
+    safe_open_folder(DIRS["tools"])
+
+
 def ensure_farm_runtime_dirs(farm: Optional[str] = None) -> None:
     for key in FARM_SCOPED_DIR_KEYS:
         farm_runtime_dir(key, farm=farm)
@@ -1649,7 +1653,7 @@ class App(tk.Tk):
         c.pack(fill=tk.X)
         ttk.Button(c, text=WIND_TOOL_NAME, style="Accent.TButton", command=self.open_wind_tool).pack(side=tk.LEFT, padx=8, pady=14)
         ttk.Button(c, text="使用说明", command=self.open_wind_tool_help).pack(side=tk.LEFT, padx=8, pady=14)
-        ttk.Button(c, text="打开工具目录", command=lambda: open_farm_runtime_folder("tools")).pack(side=tk.LEFT, padx=8, pady=14)
+        ttk.Button(c, text="打开工具目录", command=open_tools_root_folder).pack(side=tk.LEFT, padx=8, pady=14)
         ttk.Label(c, text="工具随当前成品目录携带，发给别人后可直接打开。", style="Panel.TLabel").pack(side=tk.LEFT, padx=14, pady=14)
 
     def _create_mapping_page(self):

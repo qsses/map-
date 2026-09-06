@@ -1563,7 +1563,15 @@ class App(tk.Tk):
 
     def _create_settings_page(self):
         p = self.make_page("settings")
-        ttk.Label(p, text="设置", style="Title.TLabel").pack(anchor="w", padx=24, pady=(22, 4))
+        title_bar = tk.Frame(p, bg="#0f1720")
+        title_bar.pack(fill=tk.X, padx=24, pady=(22, 4))
+        ttk.Label(title_bar, text="设置", style="Title.TLabel").pack(side=tk.LEFT, anchor="w")
+        ttk.Button(
+            title_bar,
+            text="保存设置",
+            style="Accent.TButton",
+            command=self.save_settings,
+        ).pack(side=tk.RIGHT)
         ttk.Label(p, text="服务器、工具目录和风场规则统一放在这里，主界面只保留日常操作。", style="Sub.TLabel").pack(anchor="w", padx=24, pady=(0, 14))
         self.var_remoteMode = tk.StringVar(value=self.cfg.remoteMode)
         self.var_host = tk.StringVar(value=self.cfg.host)
@@ -1626,8 +1634,6 @@ class App(tk.Tk):
         ttk.Label(c4, text=f"码云：{GITEE_REPOSITORY}", style="Panel.TLabel", wraplength=310).pack(anchor="w", pady=(8, 0))
         ttk.Label(c4, text=f"GitHub：{GITHUB_REPOSITORY}", style="Panel.TLabel", wraplength=310).pack(anchor="w", pady=(4, 0))
         ttk.Label(c4, text=f"最新版：{PRODUCT_DOWNLOAD_URL}", style="Panel.TLabel", wraplength=310).pack(anchor="w", pady=(4, 0))
-
-        ttk.Button(right, text="保存设置", style="Accent.TButton", command=self.save_settings).pack(fill=tk.X, pady=(4, 0))
 
     def _label_entry(self, parent, label, var, row, combo=None):
         tk.Label(parent, text=label, bg="#152231", fg="#e8f3f8").grid(row=row, column=0, padx=8, pady=6, sticky="w")

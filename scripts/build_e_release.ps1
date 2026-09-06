@@ -2,8 +2,8 @@ $ErrorActionPreference = "Stop"
 
 $root = Split-Path -Parent $PSScriptRoot
 $py = "C:\Users\admin\AppData\Local\Programs\Python\Python310\python.exe"
-$target = "E:\6666\MapFanSim_集成版_20260906_修复2"
-$zip = "E:\6666\MapFanSim_集成版_20260906_修复2.zip"
+$target = "E:\6666\MapFanSim_集成版_20260906_修复3"
+$zip = "E:\6666\MapFanSim_集成版_20260906_修复3.zip"
 
 Set-Location $root
 
